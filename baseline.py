@@ -278,24 +278,6 @@ def EBITDAentry():
 			
 	print "done"
 	
-def RatioEntry():
-
-	RatioMin = 10000
-	
-	for b in range(0,43):
-	
-		if UniverseListing[b][5] and UniverseListing[b][6] > 0:
-		
-			UniverseListing[b][7] = UniverseListing[b][5] / UniverseListing[b][6]
-			
-			if UniverseListing[b][7] < RatioMin:
-				RatioMin = UniverseListing[b][7]
-			
-		else:
-			UniverseListing[b][7] = 'N/A'
-			
-	return RatioMin
-	print 'Done'
 	
 #Gather all data for TSX company listing			
 SixMonthChange()
@@ -303,8 +285,6 @@ PEmin = PEentry()
 PSmin = PSentry()
 PBmin = PBentry()
 DYmax = DYentry()
-#MCentry()
-#EBITDAentry()
 RatioMin = Ratioentry()
 
 print UniverseListing
