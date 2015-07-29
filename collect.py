@@ -1,19 +1,19 @@
 # Desktop/Software/python/StockAnalysis/TrendingValue
 import csv
+import heapq
 import urllib
 import datetime
 from decimal import Decimal
 
 TSXtickers = []
 # Data to be gathered for each company (Name, PE, P/S, P/B, dividend Yield, MC/EBITDA, % change)
-UniverseListing = [[0 for i in range(13)] for i in range(43)]  # CHANGE TO 1793 companies total
+UniverseListing = [[0 for i in range(13)] for i in range(1495)]  # CHANGE TO 1793 companies total
 #Ranking List ( PE rank, P/S rank, P/B rank, DY rank, MC/Ebitda rank)
-DataRank = [[0 for i in range(5)] for i in range(43)]  #Change to 1793
 StatPage = 'http://finance.yahoo.com/d/quotes.csv?s='
 
 
 #Generate FULL TSX stock listing
-TSXcsvfile = "TSXshort.csv"
+TSXcsvfile = "TSX6.csv"
 ListingObject = open(TSXcsvfile, 'rU')	
 ListingReader = csv.DictReader(ListingObject)	
 
@@ -105,9 +105,9 @@ def DataCollector():
 				EBITDAvalue = Decimal(EBITDAvalue)*1000000000
 
 				
-			if MCvalue and EBITDAvalue != 'N/A':
-				
-				UniverseListing[ArrayIndex][5] = Decimal(MCvalue) / Decimal(EBITDAvalue)
+			if MCvalue !='N/A' and EBITDAvalue != 'N/A':
+				if EBITDAvalue != '0.00':
+					UniverseListing[ArrayIndex][5] = Decimal(MCvalue) / Decimal(EBITDAvalue)
 		
 				if UniverseListing[ArrayIndex][5] < RatioMin and UniverseListing[ArrayIndex][5] > 0:
 					RatioMin = UniverseListing[ArrayIndex][5]
@@ -164,15 +164,20 @@ def SixMonthChange():
 		file = BasePage + Ticker +'&d='+str(int(CurrentDate[1])-1)+'&e='+str(CurrentDate[2])+'&f='+CurrentDate[0]+'&g=d&a='+str(PreviousMonth-1)+'&b='+ str(PreviousDay) + '&c=' + str(PreviousYear) + '&ignore=.csv'
 		file_object = urllib.urlopen(file)
 		pricereader = csv.DictReader(file_object)
-			
-			
+
 		z = 0
 			
 		#Read CSV, take first line as current price, search for previous date string to find previous price
+
 		for row in pricereader:
+			
 			z+=1 
 			if z==1:
-				CurrentPrice = Decimal(row['Close'])
+				try:
+					CurrentPrice = Decimal(row['Close'])
+				except KeyError:
+					print Ticker
+				
 		
 			elif row['Date'] == Previous_Date_string:
 				PreviousPrice = Decimal(row['Close'])
@@ -180,8 +185,7 @@ def SixMonthChange():
 		UniverseListing[ArrayIndex][6] = round(Decimal(((CurrentPrice - PreviousPrice)/PreviousPrice)*100),2)
 		
 		
-		ArrayIndex += 1
-	print UniverseListing		
+		ArrayIndex += 1		
 
 def DataRanker(PEmin,PSmin,PBmin,DYmax,RatioMin):
 
@@ -194,9 +198,11 @@ def DataRanker(PEmin,PSmin,PBmin,DYmax,RatioMin):
 	
 		#################################### Assign PE Rank ##############################
 		if Company[1] != "N/A":
-			if Company[1] != PEmin:
+			if Company[1] != PEmin and Company[1] != 0:
 				UniverseListing[i][7] = round((Decimal(PEmin)/(Decimal(Company[1]))*100),2)
-		
+			elif Company[1] ==0:
+				UniverseListing[i][7] = 0
+				count +=1
 			else:
 				UniverseListing[i][7] = 100
 			count +=1 
@@ -206,9 +212,12 @@ def DataRanker(PEmin,PSmin,PBmin,DYmax,RatioMin):
 	
 		#################################### Assign P/S Rank #############################
 		if Company[2] != "N/A":
-			if Company[2] != PSmin:
+			if Company[2] != PSmin and Company[2] !=0:
 				UniverseListing[i][8] = round((Decimal(PSmin)/(Decimal(Company[2]))*100),2)
 				count +=1 
+			elif Company[2] ==0:
+				UniverseListing[i][8] = 0
+				count +=1
 			else:
 				Company[2] = 100
 				count +=1 
@@ -217,9 +226,12 @@ def DataRanker(PEmin,PSmin,PBmin,DYmax,RatioMin):
 			
 		#################################### Assign P/B Rank #############################
 		if Company[3] != "N/A":
-			if Company[3] != PBmin:
+			if Company[3] != PBmin and Company[3] !=0:
 				UniverseListing[i][9] = round((Decimal(PBmin)/(Decimal(Company[3]))*100),2)
 				count +=1 
+			elif Company[3] ==0:
+				UniverseListing[i][9] = 0
+				count +=1
 			else:
 				UniverseListing[i][9] = 100
 				count +=1 
@@ -241,9 +253,13 @@ def DataRanker(PEmin,PSmin,PBmin,DYmax,RatioMin):
 		
 		###################################### Assign MC/EBITDA Rank  ###################
 		if Company[5] != "N/A":
-			if Company[5] != RatioMin or Company[5] == 0:
+			if Company[5] != RatioMin and Company[5] != 0:
 				UniverseListing[i][11] = round((Decimal(RatioMin)/((Company[5]))*100),2)
 				count +=1 
+				
+			elif Company[5] == 0:
+				UniverseListing[i][11] =0
+				count +=1
 			else:
 				UniverseListing[i][11] = 100
 				count +=1 
@@ -253,17 +269,50 @@ def DataRanker(PEmin,PSmin,PBmin,DYmax,RatioMin):
 		for j in range(7,12):
 			if UniverseListing[i][j] != 'N/A':
 				RankSum += Decimal(UniverseListing[i][j])
-		CompanyRank = round(((RankSum / (count*100))*100),2)
-		print ' %s / %s * 100   = %s' % (RankSum, count, CompanyRank)
-		UniverseListing[i][12] = CompanyRank
+		
+		if Count >= 3:
+			CompanyRank = round(((RankSum / (count*100))*100),2)
+			UniverseListing[i][12] = CompanyRank
+		else:
+			UniverseListing[i][12] = 'Not enough values'
 			
 		i += 1
+
 	
-		
-		
+SixMonthChange()	
 (PEmin,PSmin,PBmin,DYmax,RatioMin) = DataCollector()
-SixMonthChange()
 DataRanker(PEmin,PSmin,PBmin,DYmax,RatioMin)
 
-for company in UniverseListing:
-			print company
+
+#Return Top 25 Stocks and Display their Key Ratios and Rank
+
+Top25rank = sorted(UniverseListing,key = lambda l: l[12])[-25:]
+
+CompanyIndex = 0
+
+for Company in Top25rank:
+
+	print """
+				%s
+			
+				PE:             %s
+				PE rank:        %s
+			
+				PS:             %s
+				PS rank:        %s
+			 
+				PB:             %s
+				PB rank:        %s
+				
+				DY:             %s
+				DY rank:        %s
+				
+				MC/EBITDA:      %s
+				MC/EBITDA rank: %s
+			
+				Company Rank:   %s
+			
+				______________________________________   """  %(Top25rank[CompanyIndex][0], Top25rank[CompanyIndex][1],Top25rank[CompanyIndex][7],Top25rank[CompanyIndex][2],Top25rank[CompanyIndex][8],Top25rank[CompanyIndex][3],Top25rank[CompanyIndex][9],Top25rank[CompanyIndex][4],Top25rank[CompanyIndex][10], Top25rank[CompanyIndex][5],Top25rank[CompanyIndex][11],Top25rank[CompanyIndex][12])
+				
+	CompanyIndex += 1
+			
