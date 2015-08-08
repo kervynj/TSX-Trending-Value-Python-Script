@@ -6,9 +6,9 @@ import datetime
 from decimal import Decimal
 
 TSXtickers = []
+Months = [[0,31],[1,28],[2,31],[3,30],[4,31],[5,30],[6,31],[7,31],[8,30],[9,31],[10,30],[11,31]]
 # Data to be gathered for each company (Name, PE, P/S, P/B, dividend Yield, MC/EBITDA, % change)
-UniverseListing = [[0 for i in range(13)] for i in range(1495)]  # CHANGE TO 1793 companies total
-#Ranking List ( PE rank, P/S rank, P/B rank, DY rank, MC/Ebitda rank)
+UniverseListing = [[0 for i in range(13)] for i in range(1486)]  # CHANGE TO 1793 companies total
 StatPage = 'http://finance.yahoo.com/d/quotes.csv?s='
 
 
@@ -118,6 +118,7 @@ def DataCollector():
 	
 	print  ' %s \t %s \t %s \t %s \t %s' % (PEmin,PSmin,PBmin,DYmax,RatioMin)
 	return PEmin,PSmin,PBmin,DYmax,RatioMin
+	print 'Completed'
 
 def SixMonthChange():
 
@@ -127,65 +128,112 @@ def SixMonthChange():
 	
 	#Determine Today's Date
 	CurrentDate = str(datetime.date.today()).split('-')
+	ReferenceDay = CurrentDate[2]
+
+
+	#Determine 6 Month Previous Corresponding Month and Year
+	if CurrentDate[1]  < 6:
+			PreviousMonth = 12 + (int(CurrentDate[1]) - 6)
+			PreviousYear = int(CurrentDate[0]) - 1
+	else:
+			PreviousYear = int(CurrentDate[0])
+			PreviousMonth = int(CurrentDate[1]) - 6
 	
 	#Check to see if today is a weekday
 	CurrentWeekDay = datetime.date.weekday(datetime.date.today())
-	#If today is saturday, adjust to fridays date
-	
+	CurrentWeekDay = 5
+
+	#If today is saturday, adjust to fridays date. If necessary adjust previous month
 	if CurrentWeekDay == 5:
-		CurrentDate[2] = int(CurrentDate[2]) - 1
-	#If today is sunday, adjust to fridays date
-	elif CurrentWeekDay ==6:
-		CurrentDate[2] =  int(CurrentDate[2]) - 2
+		if int(CurrentDate[2]) ==1:
+			CurrentDate[2] = int(Months[int(CurrentDate[1])-2][1])
+			CurrentDate[1] = int(Months[int(CurrentDate[1])-2][0])+1
+			
+		else:	
+			CurrentDate[2] = int(CurrentDate[2])-1
+			
+	#If today is Sunday, adjust to fridays date. If necessary adjust previous month	
+	if CurrentWeekDay ==6:
+		if int(CurrentDate[2]) == 1:
+			CurrentDate[2] = int(Months[int(CurrentDate[1])-2][1]) -1
+			CurrentDate[1] = int(Months[int(CurrentDate[1])-2][0]) +1	
+		elif int(CurrentDate[2]) == 2:
+			CurrentDate[2] = int(Months[int(CurrentDate[1])-2][1])	
+			CurrentDate[1] = int(Months[int(CurrentDate[1])-2][0]) +1
+		else:
+			CurrentDate[2] = int(CurrentDate[2])-2
 	
-	#Determine 6 month previous date
-	PreviousDay = int(CurrentDate[2])
+	#Determine 6 Month previous Corresponding Day
+
+	PreviousDay = int(ReferenceDay)
+	PreviousMonthEnd = int(Months[PreviousMonth-1][1])
 	
-	if CurrentDate[1]  < 6:
-		PreviousMonth = 12 + (int(CurrentDate[1]) - 6)
-		PreviousYear = int(CurrentDate[0]) - 1
+	if PreviousDay > PreviousMonthEnd:
+		PreviousWeekDay = datetime.date.weekday(datetime.date(PreviousYear,PreviousMonth,PreviousMonthEnd))
+
+		if PreviousWeekDay == 5:
+			PreviousDay = PreviousMonthEnd -1
+		if PreviousWeekDay == 6:
+			PreviousDay = PreviousMonthEnd - 2
+		else:
+			PreviousDay = PreviousMonthEnd
+		
+		Previous_Date_string = str(datetime.date(PreviousYear,PreviousMonth,PreviousDay))
+		print Previous_Date_String
+		
 	else:
-		PreviousYear = int(CurrentDate[0])
-		PreviousMonth = int(CurrentDate[1]) - 5
-	
-	#Check if previous date is a weekend, adjust accordingly	
-	PreviousWeekDay = datetime.date.weekday(datetime.date(PreviousYear,PreviousMonth,int(CurrentDate[2])))
-	
-	if PreviousWeekDay == 5:
-		PreviousDay = int(CurrentDate[2])-1
-	elif PreviousWeekDay ==6:
-		PreviousDay =  int(CurrentDate[2]) - 2
+		PreviousWeekDay = datetime.date.weekday(datetime.date(PreviousYear,PreviousMonth,PreviousDay))
 		
-	Previous_Date_string = str(datetime.date(PreviousYear,PreviousMonth,PreviousDay))
+		if PreviousWeekDay == 5:
+			if PreviousDay ==1:
+				PreviousDay = Months[PreviousMonth-2][1]
+				PreviousMonth = Months[PreviousMonth-2][0]+1
+			else:
+				PreviousDay = PreviousDay - 1
 	
-	for Ticker in TSXtickers:
+		if PreviousWeekDay == 6:
+			if PreviousDay ==1:
+				PreviousDay = Months[PreviousMonth-2][1]-1
+				PreviousMonth = Months[PreviousMonth-2][0]+1
+			elif PreviousDay == 2:
+		
+				PreviousDay = Months[PreviousMonth-2][1]
+				PreviousMonth = Months[PreviousMonth-2][0] + 1
+			else:
+				PreviousDay = PreviousDay - 2
 			
-		#Create URL to fetch price changes
-		file = BasePage + Ticker +'&d='+str(int(CurrentDate[1])-1)+'&e='+str(CurrentDate[2])+'&f='+CurrentDate[0]+'&g=d&a='+str(PreviousMonth-1)+'&b='+ str(PreviousDay) + '&c=' + str(PreviousYear) + '&ignore=.csv'
-		file_object = urllib.urlopen(file)
-		pricereader = csv.DictReader(file_object)
-
-		z = 0
-			
-		#Read CSV, take first line as current price, search for previous date string to find previous price
-
-		for row in pricereader:
-			
-			z+=1 
-			if z==1:
-				try:
-					CurrentPrice = Decimal(row['Close'])
-				except KeyError:
-					print Ticker
+		Previous_Date_string = str(datetime.date(PreviousYear,PreviousMonth,PreviousDay))
+		
+		for Ticker in TSXtickers:
 				
-		
-			elif row['Date'] == Previous_Date_string:
-				PreviousPrice = Decimal(row['Close'])
+			#Create URL to fetch price changes
+			file = BasePage + Ticker +'&d='+str(int(CurrentDate[1])-1)+'&e='+str(CurrentDate[2])+'&f='+CurrentDate[0]+'&g=d&a='+str(PreviousMonth-1)+'&b='+ str(PreviousDay) + '&c=' + str(PreviousYear) + '&ignore=.csv'
+			file_object = urllib.urlopen(file)
+			pricereader = csv.DictReader(file_object)
+			
+			z = 0
 				
-		UniverseListing[ArrayIndex][6] = round(Decimal(((CurrentPrice - PreviousPrice)/PreviousPrice)*100),2)
-		
-		
-		ArrayIndex += 1		
+			#Read CSV, take first line as current price, search for previous date string to find previous price
+			for row in pricereader:
+			
+				z+=1 
+				if z==1:
+					try:
+						CurrentPrice = Decimal(row['Close'])
+					except KeyError:
+						print Ticker
+						
+				else:
+					try:
+						if row['Date'] == Previous_Date_string:
+							PreviousPrice = Decimal(row['Close'])
+					except KeyError:
+						print Ticker
+	    	
+			UniverseListing[ArrayIndex][6] = round(Decimal(((CurrentPrice - PreviousPrice)/PreviousPrice)*100),2)
+			
+			ArrayIndex += 1		
+	print 'Completed'
 
 def DataRanker(PEmin,PSmin,PBmin,DYmax,RatioMin):
 
@@ -242,12 +290,12 @@ def DataRanker(PEmin,PSmin,PBmin,DYmax,RatioMin):
 		
 		if Company[4] != "N/A":
 			if Company[4] != DYmax:
-				UniverseListing[i][10] = round(((Decimal(DYmax)-Decimal(Company[4]))/Decimal(DYmax)*100),2)
+				UniverseListing[i][10] = round(((Decimal(Company[4]))/Decimal(DYmax)*100),2)
 				count +=1 
 			else:
 				UniverseListing[i][10] = 100
 				count +=1 
-		else:
+		elif Company[4] == "N/A":
 			UniverseListing[i][10] = "N/A" # If DY == "N/A", company does not pay dividends, do not rank
 		
 		
@@ -270,13 +318,15 @@ def DataRanker(PEmin,PSmin,PBmin,DYmax,RatioMin):
 			if UniverseListing[i][j] != 'N/A':
 				RankSum += Decimal(UniverseListing[i][j])
 		
-		if Count >= 3:
+		if count >= 3:
 			CompanyRank = round(((RankSum / (count*100))*100),2)
 			UniverseListing[i][12] = CompanyRank
 		else:
-			UniverseListing[i][12] = 'Not enough values'
+			UniverseListing[i][12] = 0
 			
 		i += 1
+	
+	print 'Completed'
 
 	
 SixMonthChange()	
@@ -285,8 +335,8 @@ DataRanker(PEmin,PSmin,PBmin,DYmax,RatioMin)
 
 
 #Return Top 25 Stocks and Display their Key Ratios and Rank
-
 Top25rank = sorted(UniverseListing,key = lambda l: l[12])[-25:]
+Top25Ordered = sorted(Top25rank, key = lambda x: abs(x[6]))[-25:]
 
 CompanyIndex = 0
 
@@ -294,7 +344,9 @@ for Company in Top25rank:
 
 	print """
 				%s
-			
+				
+				6 month change: %s
+				
 				PE:             %s
 				PE rank:        %s
 			
@@ -312,7 +364,7 @@ for Company in Top25rank:
 			
 				Company Rank:   %s
 			
-				______________________________________   """  %(Top25rank[CompanyIndex][0], Top25rank[CompanyIndex][1],Top25rank[CompanyIndex][7],Top25rank[CompanyIndex][2],Top25rank[CompanyIndex][8],Top25rank[CompanyIndex][3],Top25rank[CompanyIndex][9],Top25rank[CompanyIndex][4],Top25rank[CompanyIndex][10], Top25rank[CompanyIndex][5],Top25rank[CompanyIndex][11],Top25rank[CompanyIndex][12])
+				______________________________________   """  %(Top25rank[CompanyIndex][0], Top25rank[CompanyIndex][6],Top25rank[CompanyIndex][1],Top25rank[CompanyIndex][7],Top25rank[CompanyIndex][2],Top25rank[CompanyIndex][8],Top25rank[CompanyIndex][3],Top25rank[CompanyIndex][9],Top25rank[CompanyIndex][4],Top25rank[CompanyIndex][10], Top25rank[CompanyIndex][5],Top25rank[CompanyIndex][11],Top25rank[CompanyIndex][12])
 				
 	CompanyIndex += 1
 			
