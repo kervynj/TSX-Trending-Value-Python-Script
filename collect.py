@@ -1,6 +1,12 @@
+# This Script is based on the work of James O'Shaughnessy as cited in his book "What Works on Wall Street"
+# Its designed to run a trending value analysis on the Toronto Stock Exchange (TSX)
+# The companies returned by this program are not intended to be invested in without further investigation
+# Not for sale
+# Mitchell Johnston, 2015
+
+
 # Desktop/Software/python/StockAnalysis/TrendingValue
 import csv
-import heapq
 import urllib
 import datetime
 from decimal import Decimal
@@ -8,7 +14,7 @@ from decimal import Decimal
 TSXtickers = []
 Months = [[0,31],[1,28],[2,31],[3,30],[4,31],[5,30],[6,31],[7,31],[8,30],[9,31],[10,30],[11,31]]
 # Data to be gathered for each company (Name, PE, P/S, P/B, dividend Yield, MC/EBITDA, % change)
-UniverseListing = [[0 for i in range(13)] for i in range(1486)]  # CHANGE TO 1793 companies total
+UniverseListing = [[0 for i in range(13)] for i in range(1486)]  # CHANGE TO 1486 companies total
 StatPage = 'http://finance.yahoo.com/d/quotes.csv?s='
 
 
@@ -60,7 +66,7 @@ def DataCollector():
 			else:
 				UniverseListing[ArrayIndex][2] = row[2]
 				
-			if UniverseListing[ArrayIndex][2] < PSmin:
+			if UniverseListing[ArrayIndex][2] < PSmin and UniverseListing[ArrayIndex][2] != 0 :
 				PSmin = UniverseListing[ArrayIndex][2]
 				
 			#############Assign PB and determine Min value
@@ -107,10 +113,10 @@ def DataCollector():
 				
 			if MCvalue !='N/A' and EBITDAvalue != 'N/A':
 				if EBITDAvalue != '0.00':
-					UniverseListing[ArrayIndex][5] = Decimal(MCvalue) / Decimal(EBITDAvalue)
+					UniverseListing[ArrayIndex][5] = round((Decimal(MCvalue) / Decimal(EBITDAvalue)),2)
 		
 				if UniverseListing[ArrayIndex][5] < RatioMin and UniverseListing[ArrayIndex][5] > 0:
-					RatioMin = UniverseListing[ArrayIndex][5]
+					RatioMin = round(UniverseListing[ArrayIndex][5],2)
 			else:
 				UniverseListing[ArrayIndex][5] = 'N/A'
 				
@@ -234,113 +240,107 @@ def SixMonthChange():
 			
 			ArrayIndex += 1		
 	print 'Completed'
-
-def DataRanker(PEmin,PSmin,PBmin,DYmax,RatioMin):
-
-	i = 0
-		
-	for Company in UniverseListing:
-		#Initialize counter to determine what companies maximum rank potential may be
-		count = 0 
-		RankSum = 0
 	
-		#################################### Assign PE Rank ##############################
-		if Company[1] != "N/A":
-			if Company[1] != PEmin and Company[1] != 0:
-				UniverseListing[i][7] = round((Decimal(PEmin)/(Decimal(Company[1]))*100),2)
-			elif Company[1] ==0:
-				UniverseListing[i][7] = 0
-				count +=1
-			else:
-				UniverseListing[i][7] = 100
-			count +=1 
-		else:
-			UniverseListing[i][7] = 0    # If PE == "N/A" earnings are negative, assign 0 rank
-			count +=1 
+def DataRanker():
 	
-		#################################### Assign P/S Rank #############################
-		if Company[2] != "N/A":
-			if Company[2] != PSmin and Company[2] !=0:
-				UniverseListing[i][8] = round((Decimal(PSmin)/(Decimal(Company[2]))*100),2)
-				count +=1 
-			elif Company[2] ==0:
-				UniverseListing[i][8] = 0
-				count +=1
-			else:
-				Company[2] = 100
-				count +=1 
+	#################################### Assign PE Rank ##################################
+	ordered = list(enumerate(sorted(UniverseListing, key = lambda i: i[1])))
+	
+	for company in ordered:
+	
+		PEindexnumber = Decimal(company[0])
+		
+		if company[1][1] != 'N/A':
+			PErank = round(Decimal(((len(ordered)-PEindexnumber)/len(ordered))*100),2)
+			ordered[int(PEindexnumber)][1][7] = PErank
 		else:
-			UniverseListing[i][8] = "N/A" 
-			
-		#################################### Assign P/B Rank #############################
-		if Company[3] != "N/A":
-			if Company[3] != PBmin and Company[3] !=0:
-				UniverseListing[i][9] = round((Decimal(PBmin)/(Decimal(Company[3]))*100),2)
-				count +=1 
-			elif Company[3] ==0:
-				UniverseListing[i][9] = 0
-				count +=1
+			ordered[int(PEindexnumber)][1][7] = Decimal(20)
+	
+	#################################### Assign P/S Rank #################################
+	
+	ordered = list(enumerate(sorted(UniverseListing, key = lambda i: i[2])))
+	
+	for company in ordered:
+		PSindexnumber = Decimal(company[0])
+		PSrank = round(Decimal(((len(ordered)-PSindexnumber)/len(ordered))*100),2)
+		ordered[int(PSindexnumber)][1][8] = PSrank
+
+	#################################### Assign P/B Rank #################################
+	
+	ordered = list(enumerate(sorted(UniverseListing, key = lambda i: i[3])))
+	
+	for company in ordered:
+		PBindexnumber = Decimal(company[0])
+		PBrank = round(Decimal(((len(ordered)-PBindexnumber)/len(ordered))*100),2)
+		ordered[int(PBindexnumber)][1][9] = PBrank
+	
+	#################################### Assign DY Rank ##################################
+	
+	ordered = list(enumerate(sorted(UniverseListing, key = lambda i: i[4], reverse= True)))
+	
+	for company in ordered:
+	
+		DYindexnumber = Decimal(company[0])
+		
+		if company[1][4] != 'N/A':
+			DYrank = round(Decimal(((len(ordered)-DYindexnumber)/len(ordered))*100),2)
+			if DYrank > 50:
+				ordered[int(DYindexnumber)][1][10] = DYrank
+				print DYrank
 			else:
-				UniverseListing[i][9] = 100
-				count +=1 
-		else:
-			UniverseListing[i][9] = "N/A" # If p/b == "N/A" ratio is not reported, therefore dont rank at all
+				ordered[int(DYindexnumber)][1][10] = DYrank + 50
+				print DYrank
+		elif company[1][4] == 'N/A':
+			DYrank = 50
+			ordered[int(DYindexnumber)][1][10] = DYrank
 			
-		#################################### Assign Dividend Yield Rank ##################
+	#################################### MC/EBITDA Rank ##################################
+
+	ordered = list(enumerate(sorted(UniverseListing, key = lambda i: i[5])))
+	
+	for company in ordered:
+	
+		MCEindexnumber = Decimal(company[0])
 		
-		if Company[4] != "N/A":
-			if Company[4] != DYmax:
-				UniverseListing[i][10] = round(((Decimal(Company[4]))/Decimal(DYmax)*100),2)
-				count +=1 
-			else:
-				UniverseListing[i][10] = 100
-				count +=1 
-		elif Company[4] == "N/A":
-			UniverseListing[i][10] = "N/A" # If DY == "N/A", company does not pay dividends, do not rank
-		
-		
-		###################################### Assign MC/EBITDA Rank  ###################
-		if Company[5] != "N/A":
-			if Company[5] != RatioMin and Company[5] != 0:
-				UniverseListing[i][11] = round((Decimal(RatioMin)/((Company[5]))*100),2)
-				count +=1 
+		if company[1][5] > 0 and company[1][5] != 'N/A':
+
+			if MCEvalue <=0 and company[1][5] >=0:
+				length = MCEindexnumber
+				MCErank = round(Decimal(((len(ordered)-length)/(len(ordered)-length))*100),2)
 				
-			elif Company[5] == 0:
-				UniverseListing[i][11] =0
-				count +=1
-			else:
-				UniverseListing[i][11] = 100
-				count +=1 
-		else:
-			UniverseListing[i][11] = "N/A" # If ratio == "N/A" ratio is not reported, therefore dont rank at all
-		
-		for j in range(7,12):
-			if UniverseListing[i][j] != 'N/A':
-				RankSum += Decimal(UniverseListing[i][j])
-		
-		if count >= 3:
-			CompanyRank = round(((RankSum / (count*100))*100),2)
-			UniverseListing[i][12] = CompanyRank
-		else:
-			UniverseListing[i][12] = 0
+			MCErank = round(Decimal(((len(ordered)-MCEindexnumber)/(len(ordered)-length))*100),2)	
+			ordered[int(MCEindexnumber)][1][11] = MCErank
 			
-		i += 1
+		else:	
+			MCErank = 20
+			ordered[int(MCEindexnumber)][1][11] = MCErank
+		
+		MCEvalue = company[1][5]
+		
+	###################################### Determine Overall Rank ########################
 	
-	print 'Completed'
+	for company in ordered:
+		score = 0
+		scoreindex = company[0]
+		for ranking in range (7,12):
+			score += round(Decimal(company[1][ranking]),2)
+		ordered[scoreindex][1][12] = score
+		
+	return ordered
 
-	
+
 SixMonthChange()	
 (PEmin,PSmin,PBmin,DYmax,RatioMin) = DataCollector()
-DataRanker(PEmin,PSmin,PBmin,DYmax,RatioMin)
-
+ordered = DataRanker()
 
 #Return Top 25 Stocks and Display their Key Ratios and Rank
-Top25rank = sorted(UniverseListing,key = lambda l: l[12])[-25:]
-Top25Ordered = sorted(Top25rank, key = lambda x: abs(x[6]))[-25:]
+
+Top25rank = list(sorted(ordered,key = lambda l: l[1][12])[-25:]) #Sort to find top 25 companies based on overall rank
+Top25ordered = sorted(ordered, key = lambda x: abs(x[1][6]))[-25:] #Sort based on 6 month price change 
 
 CompanyIndex = 0
 
-for Company in Top25rank:
+for Company in Top25ordered:
 
 	print """
 				%s
@@ -364,7 +364,7 @@ for Company in Top25rank:
 			
 				Company Rank:   %s
 			
-				______________________________________   """  %(Top25rank[CompanyIndex][0], Top25rank[CompanyIndex][6],Top25rank[CompanyIndex][1],Top25rank[CompanyIndex][7],Top25rank[CompanyIndex][2],Top25rank[CompanyIndex][8],Top25rank[CompanyIndex][3],Top25rank[CompanyIndex][9],Top25rank[CompanyIndex][4],Top25rank[CompanyIndex][10], Top25rank[CompanyIndex][5],Top25rank[CompanyIndex][11],Top25rank[CompanyIndex][12])
+				______________________________________   """  %(Top25rank[CompanyIndex][1][0], Top25rank[CompanyIndex][1][6],Top25rank[CompanyIndex][1][1],Top25rank[CompanyIndex][1][7],Top25rank[CompanyIndex][1][2],Top25rank[CompanyIndex][1][8],Top25rank[CompanyIndex][1][3],Top25rank[CompanyIndex][1][9],Top25rank[CompanyIndex][1][4],Top25rank[CompanyIndex][1][10], Top25rank[CompanyIndex][1][5],Top25rank[CompanyIndex][1][11],Top25rank[CompanyIndex][1][12])
 				
 	CompanyIndex += 1
 			
