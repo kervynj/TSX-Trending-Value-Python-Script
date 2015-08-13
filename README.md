@@ -5,7 +5,7 @@
 The TSX Trending Value Python Script is based on the work of James O'Shaughnessy's book "What Works on Wall Street".
 With some mofifications to O'Shaugnessy's Value Factor 2 Model, the program will return the top 25 ranked companies evaluated on
 the Toronto Stock Exchange (TSX). The program fetches company data from the Yahoo Finance API and ranks its financials with respect 
-to all other companies listed on the TSX. The top 25 caompanies are ranked and returned to the user in the Terminal.
+to all other companies listed on the TSX. The top 25 companies are ranked and returned to the user in the Terminal.
 
 - Installation & Operating Instructions- 
 
@@ -21,31 +21,32 @@ For mac users:
   
   Results will be returned in the following format:
   
-  	______________________________________   
+			______________________________________   
 
-				Magellan Aero
+				Arsenal Energy Inc-
 				
-				6 month change: 25.87
+				6 month change: -44.14
 				
-				PE:             15.46
-				PE rank:        84.99
+				PE:             1.36
+				PE rank:        99.66
 			
-				PS:             0.00
-				PS rank:        100.0
+				PS:             0.46
+				PS rank:        91.18
 			 
-				PB:             0.01
-				PB rank:        100.0
+				PB:             0.39
+				PB rank:        92.13
 				
 				DY:             N/A
 				DY rank:        50
 				
-				MC/EBITDA:      0.02
-				MC/EBITDA rank: 100.0
+				MC/EBITDA:      0.54
+				MC/EBITDA rank: 98.54
 			
-				Company Rank:   434.99
+				Company Rank:   431.51
 			
-				______________________________________   
-  
+			______________________________________   
+
+
   
 
 
