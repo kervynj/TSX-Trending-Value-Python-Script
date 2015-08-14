@@ -32,6 +32,8 @@ for row in ListingReader:
 
 def DataCollector():
 	
+	print "			Fetching Company financials..."
+	
 	ArrayIndex = 0
 	
 	PEmin = 10000
@@ -122,12 +124,15 @@ def DataCollector():
 				
 		ArrayIndex += 1
 	
-	print  ' %s \t %s \t %s \t %s \t %s' % (PEmin,PSmin,PBmin,DYmax,RatioMin)
+	print  '		Critical Values: %s \t %s \t %s \t %s \t %s' % (PEmin,PSmin,PBmin,DYmax,RatioMin)
 	return PEmin,PSmin,PBmin,DYmax,RatioMin
 	print 'Completed'
 
 def SixMonthChange():
-
+	
+	print "			Fetching 6 Month Price Change Data...			"
+						
+	
 	ArrayIndex = 0
 	
 	BasePage = 'http://real-chart.finance.yahoo.com/table.csv?s='
@@ -227,14 +232,14 @@ def SixMonthChange():
 					try:
 						CurrentPrice = Decimal(row['Close'])
 					except KeyError:
-						print Ticker
+						print ''
 						
 				else:
 					try:
 						if row['Date'] == Previous_Date_string:
 							PreviousPrice = Decimal(row['Close'])
 					except KeyError:
-						print Ticker
+						print ''
 	    	
 			UniverseListing[ArrayIndex][6] = round(Decimal(((CurrentPrice - PreviousPrice)/PreviousPrice)*100),2)
 			
@@ -286,10 +291,8 @@ def DataRanker():
 			DYrank = round(Decimal(((len(ordered)-DYindexnumber)/len(ordered))*100),2)
 			if DYrank > 50:
 				ordered[int(DYindexnumber)][1][10] = DYrank
-				print DYrank
 			else:
 				ordered[int(DYindexnumber)][1][10] = DYrank + 50
-				print DYrank
 		elif company[1][4] == 'N/A':
 			DYrank = 50
 			ordered[int(DYindexnumber)][1][10] = DYrank
