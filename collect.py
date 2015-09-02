@@ -1,6 +1,6 @@
-# This Script is based on the work of James O'Shaughnessy as cited in his book "What Works on Wall Street"
+# This Program is based on the work of James O'Shaughnessy as cited in his book "What Works on Wall Street"
 # Its designed to run a trending value analysis on the Toronto Stock Exchange (TSX)
-# The companies returned by this program are not intended to be invested in without further investigation
+# The companies selected by this screener are not meant to be invested in without further investigation
 # Not for sale
 # Mitchell Johnston, 2015
 
@@ -8,14 +8,23 @@
 # Desktop/Software/python/StockAnalysis/TrendingValue
 import csv
 import urllib
+import re
 import datetime
 from decimal import Decimal
 
+version = 'v1.0'
 TSXtickers = []
 Months = [[0,31],[1,28],[2,31],[3,30],[4,31],[5,30],[6,31],[7,31],[8,30],[9,31],[10,30],[11,31]]
 # Data to be gathered for each company (Name, PE, P/S, P/B, dividend Yield, MC/EBITDA, % change)
 UniverseListing = [[0 for i in range(13)] for i in range(1486)]  # CHANGE TO 1486 companies total
 StatPage = 'http://finance.yahoo.com/d/quotes.csv?s='
+
+print """
+
+			TSX Trending Value Screen %s
+		  """   %(version)
+		  
+start = raw_input('Press [enter] to begin')
 
 
 #Generate FULL TSX stock listing
@@ -29,7 +38,7 @@ for row in ListingReader:
 	TSXtickers.append(row['Symbol'])
 	UniverseListing[a][0] = row['Description']
 	a +=1
-
+	
 def DataCollector():
 	
 	print "			Fetching Company financials..."
@@ -41,7 +50,9 @@ def DataCollector():
 	PBmin = 10000
 	DYmax = 0
 	RatioMin = 10000
-
+		
+	
+	#Assign PE PS PB MC/EBITDA to company listing
 	for Ticker in TSXtickers:
 
 		file = StatPage + Ticker + '&f=' + 'nrp5p6yj1j4'
@@ -88,7 +99,7 @@ def DataCollector():
 					DYmax = UniverseListing[ArrayIndex][4]
 			else:
 				UniverseListing[ArrayIndex][4] = row[4]
-				
+
 			#############Determine MC/EBITDA and Min value
 			MCvalue = row[5]
 			
@@ -124,7 +135,7 @@ def DataCollector():
 				
 		ArrayIndex += 1
 	
-	print  '		Critical Values: %s \t %s \t %s \t %s \t %s' % (PEmin,PSmin,PBmin,DYmax,RatioMin)
+	print  'Critical Values: %s \t %s \t %s \t %s \t %s' % (PEmin,PSmin,PBmin,DYmax,RatioMin)
 	return PEmin,PSmin,PBmin,DYmax,RatioMin
 	print 'Completed'
 
@@ -234,12 +245,19 @@ def SixMonthChange():
 					except KeyError:
 						print ''
 						
+				elif z==2:
+					try:
+						if row['Date'] == Previous_Date_string:
+							PreviousPrice = Decimal(row['Close'])
+					except KeyError:
+						print ' %s - Error: No Price History' %(Ticker)
+					
 				else:
 					try:
 						if row['Date'] == Previous_Date_string:
 							PreviousPrice = Decimal(row['Close'])
 					except KeyError:
-						print ''
+						break
 	    	
 			UniverseListing[ArrayIndex][6] = round(Decimal(((CurrentPrice - PreviousPrice)/PreviousPrice)*100),2)
 			
@@ -287,15 +305,24 @@ def DataRanker():
 	
 		DYindexnumber = Decimal(company[0])
 		
-		if company[1][4] != 'N/A':
-			DYrank = round(Decimal(((len(ordered)-DYindexnumber)/len(ordered))*100),2)
-			if DYrank > 50:
+		if company[1][4] !='N/A':
+		 	if Yield == 'N/A':
+				relevantlength = DYindexnumber
+				print relevantlength
+				DYrank = round(Decimal(((len(ordered)-relevantlength)/(len(ordered)-relevantlength))*100),2)
 				ordered[int(DYindexnumber)][1][10] = DYrank
+				
 			else:
-				ordered[int(DYindexnumber)][1][10] = DYrank + 50
-		elif company[1][4] == 'N/A':
-			DYrank = 50
-			ordered[int(DYindexnumber)][1][10] = DYrank
+				DYrank = round(Decimal(((len(ordered)-DYindexnumber)/(len(ordered)-relevantlength))*100),2)
+			
+				if DYrank > 20:
+					ordered[int(DYindexnumber)][1][10] = DYrank
+				else:
+					ordered[int(DYindexnumber)][1][10] = DYrank + 30	
+		else:
+			ordered[int(DYindexnumber)][1][10] = 20
+			
+		Yield = company[1][4]
 			
 	#################################### MC/EBITDA Rank ##################################
 
@@ -331,6 +358,44 @@ def DataRanker():
 		
 	return ordered
 
+def query(inputTicker,ordered):
+	
+	searchlist = list(enumerate(TSXtickers))
+		
+	for ticker in searchlist:
+		
+		tickerindex = int(ticker[0])
+		
+		if ticker[1] == inputTicker:
+			RetrievedCompany = UniverseListing[tickerindex][0]
+			print "Found %s" %(RetrievedCompany)
+		
+			for stock in ordered:
+				if stock[1][0] == RetrievedCompany:
+					print """ 
+				%s
+				
+				6 month change: %s 
+				
+				PE:             %s
+				PE rank:        %s
+			
+				PS:             %s
+				PS rank:        %s
+			 
+				PB:             %s
+				PB rank:        %s
+					
+				DY:             %s
+				DY rank:        %s
+				
+				MC/EBITDA:      %s
+				MC/EBITDA rank: %s
+				
+				Company Rank:   %s
+			
+				______________________________________"""  %(stock[1][0], stock[1][6],stock[1][1],stock[1][7],stock[1][2],stock[1][8],stock[1][3],stock[1][9],stock[1][4],stock[1][10], stock[1][5],stock[1][11],stock[1][12])
+
 
 SixMonthChange()	
 (PEmin,PSmin,PBmin,DYmax,RatioMin) = DataCollector()
@@ -338,8 +403,8 @@ ordered = DataRanker()
 
 #Return Top 25 Stocks and Display their Key Ratios and Rank
 
-Top25rank = list(sorted(ordered,key = lambda l: l[1][12])[-25:]) #Sort to find top 25 companies based on overall rank
-Top25ordered = sorted(ordered, key = lambda x: abs(x[1][6]))[-25:] #Sort based on 6 month price change 
+Top100rank = list(sorted(ordered,key = lambda l: l[1][12])[-160:]) #Sort to find top 25 companies based on overall rank
+Top25ordered = sorted(Top100rank, key = lambda x: (x[1][6]))[-25:] #Sort based on 6 month price change 
 
 CompanyIndex = 0
 
@@ -348,7 +413,7 @@ for Company in Top25ordered:
 	print """
 				%s
 				
-				6 month change: %s
+				6 month change: %s 
 				
 				PE:             %s
 				PE rank:        %s
@@ -367,7 +432,19 @@ for Company in Top25ordered:
 			
 				Company Rank:   %s
 			
-				______________________________________   """  %(Top25rank[CompanyIndex][1][0], Top25rank[CompanyIndex][1][6],Top25rank[CompanyIndex][1][1],Top25rank[CompanyIndex][1][7],Top25rank[CompanyIndex][1][2],Top25rank[CompanyIndex][1][8],Top25rank[CompanyIndex][1][3],Top25rank[CompanyIndex][1][9],Top25rank[CompanyIndex][1][4],Top25rank[CompanyIndex][1][10], Top25rank[CompanyIndex][1][5],Top25rank[CompanyIndex][1][11],Top25rank[CompanyIndex][1][12])
+				______________________________________"""  %(Top25ordered[CompanyIndex][1][0], Top25ordered[CompanyIndex][1][6],Top25ordered[CompanyIndex][1][1],Top25ordered[CompanyIndex][1][7],Top25ordered[CompanyIndex][1][2],Top25ordered[CompanyIndex][1][8],Top25ordered[CompanyIndex][1][3],Top25ordered[CompanyIndex][1][9],Top25ordered[CompanyIndex][1][4],Top25ordered[CompanyIndex][1][10], Top25ordered[CompanyIndex][1][5],Top25ordered[CompanyIndex][1][11],Top25ordered[CompanyIndex][1][12])
 				
 	CompanyIndex += 1
+	
+
+print "Would you like to search results?"
+response = raw_input('>\t')
+
+if response == 'yes':
+	while True:
+		print "Enter company name. (eg HSE.to)"
+		inputTicker = raw_input('>\t')
+		query(inputTicker,ordered)
+
+
 			
