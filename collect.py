@@ -59,7 +59,6 @@ def DataCollector():
 		file_object = urllib.urlopen(file)
 		reader = csv.reader(file_object)
 		
-		
 		#Assign Data to List
 		
 		for row in reader:
@@ -305,15 +304,19 @@ def DataRanker():
 	
 		DYindexnumber = Decimal(company[0])
 		
-		if company[1][4] !='N/A':
+		if company[1][4] == 0.00 or company[1][4] ==0.000:
+			ordered[int(DYindexnumber)][1][10] = 20	
+			
+		elif company[1][4] !='N/A':
 		 	if Yield == 'N/A':
 				relevantlength = DYindexnumber
+				n_applicable = len(ordered) - relevantlength
 				print relevantlength
 				DYrank = round(Decimal(((len(ordered)-relevantlength)/(len(ordered)-relevantlength))*100),2)
 				ordered[int(DYindexnumber)][1][10] = DYrank
 				
 			else:
-				DYrank = round(Decimal(((len(ordered)-DYindexnumber)/(len(ordered)-relevantlength))*100),2)
+				DYrank = round(Decimal(((80/n_applicable)*(len(ordered)-DYindexnumber)+20)),2)
 			
 				if DYrank > 20:
 					ordered[int(DYindexnumber)][1][10] = DYrank
@@ -400,11 +403,11 @@ def query(inputTicker,ordered):
 SixMonthChange()	
 (PEmin,PSmin,PBmin,DYmax,RatioMin) = DataCollector()
 ordered = DataRanker()
+		
 
 #Return Top 25 Stocks and Display their Key Ratios and Rank
-
-Top100rank = list(sorted(ordered,key = lambda l: l[1][12])[-160:]) #Sort to find top 25 companies based on overall rank
-Top25ordered = sorted(Top100rank, key = lambda x: (x[1][6]))[-25:] #Sort based on 6 month price change 
+Top100rank = list(sorted(ordered,key = lambda l: l[1][12])[-160:]) # Narrow down to Top 10% based on financials
+Top25ordered = sorted(Top100rank, key = lambda x: (x[1][6]))[-25:] #Sort Top 25 based on 6 month price change 
 
 CompanyIndex = 0
 
