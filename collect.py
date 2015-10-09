@@ -13,29 +13,42 @@ import datetime
 from decimal import Decimal
 
 version = 'v1.0'
-TSXtickers = []
+tickers = []
 Months = [[0,31],[1,28],[2,31],[3,30],[4,31],[5,30],[6,31],[7,31],[8,30],[9,31],[10,30],[11,31]]
 # Data to be gathered for each company (Name, PE, P/S, P/B, dividend Yield, MC/EBITDA, % change)
-UniverseListing = [[0 for i in range(13)] for i in range(1486)]  # CHANGE TO 1486 companies total
+#UniverseListing = [[0 for i in range(13)] for i in range(1486)]  # CHANGE TO 1486 companies total
 StatPage = 'http://finance.yahoo.com/d/quotes.csv?s='
 
 print """
 
 			TSX Trending Value Screen %s
 		  """   %(version)
-		  
+exchange = raw_input('Press 1 For TSX \n      2 For NYSE\n\n>')
+
+if exchange =='1':
+	UniverseListing = [[0 for i in range(13)] for i in range(1486)]
+	tenth_percent = 160
+	print '\nToronto Stock Exchange Selected\n'
+	csvfile = "TSX6.csv"
+elif exchange =='2':
+	print '\nNew York Stock Exchange Selected\n'
+	UniverseListing = [[0 for i in range(13)] for i in range(3286)]
+	tenth_percent = 321
+	csvfile = "NYSE6.csv"
+else:
+	print "Invalid Input"
+
 start = raw_input('Press [enter] to begin')
+	
 
-
-#Generate FULL TSX stock listing
-TSXcsvfile = "TSX6.csv"
-ListingObject = open(TSXcsvfile, 'rU')	
+#Generate FULL stock listing
+ListingObject = open(csvfile, 'rU')	
 ListingReader = csv.DictReader(ListingObject)	
 
 #Generate List of TSX stocks
 a = 0
 for row in ListingReader:
-	TSXtickers.append(row['Symbol'])
+	tickers.append(row['Symbol'])
 	UniverseListing[a][0] = row['Description']
 	a +=1
 	
@@ -53,7 +66,7 @@ def DataCollector():
 		
 	
 	#Assign PE PS PB MC/EBITDA to company listing
-	for Ticker in TSXtickers:
+	for Ticker in tickers:
 
 		file = StatPage + Ticker + '&f=' + 'nrp5p6yj1j4'
 		file_object = urllib.urlopen(file)
@@ -225,7 +238,7 @@ def SixMonthChange():
 			
 		Previous_Date_string = str(datetime.date(PreviousYear,PreviousMonth,PreviousDay))
 		
-		for Ticker in TSXtickers:
+		for Ticker in tickers:
 				
 			#Create URL to fetch price changes
 			file = BasePage + Ticker +'&d='+str(int(CurrentDate[1])-1)+'&e='+str(CurrentDate[2])+'&f='+CurrentDate[0]+'&g=d&a='+str(PreviousMonth-1)+'&b='+ str(PreviousDay) + '&c=' + str(PreviousYear) + '&ignore=.csv'
@@ -363,7 +376,7 @@ def DataRanker():
 
 def query(inputTicker,ordered):
 	
-	searchlist = list(enumerate(TSXtickers))
+	searchlist = list(enumerate(tickers))
 		
 	for ticker in searchlist:
 		
@@ -406,7 +419,7 @@ ordered = DataRanker()
 		
 
 #Return Top 25 Stocks and Display their Key Ratios and Rank
-Top100rank = list(sorted(ordered,key = lambda l: l[1][12])[-160:]) # Narrow down to Top 10% based on financials
+Top100rank = list(sorted(ordered,key = lambda l: l[1][12])[-tenth_percent:]) # Narrow down to Top 10% based on financials
 Top25ordered = sorted(Top100rank, key = lambda x: (x[1][6]))[-25:] #Sort Top 25 based on 6 month price change 
 
 CompanyIndex = 0
