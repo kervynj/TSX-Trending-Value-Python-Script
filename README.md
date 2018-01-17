@@ -1,5 +1,6 @@
 # TSX-Trending-Value-Python-Script
 ** Please See V2 here: https://github.com/kervynj/Trending_V2 **
+
 -Program Overview-
 
 The TSX Trending Value Python Script is based on the work of James O'Shaughnessy's book "What Works on Wall Street".
